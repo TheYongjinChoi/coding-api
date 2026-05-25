@@ -11,6 +11,8 @@ RUN R -e "install.packages('pak', repos='https://r-lib.github.io/p/pak/stable/')
 
 RUN R -e "pak::pkg_install(c(\
     'plumber', \
+    'DBI', \
+    'RSQLite', \
     'dplyr', \
     'tidyr', \
     'ggplot2', \
