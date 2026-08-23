@@ -18,7 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
-# ── R 패키지 (P3M 바이너리 사용: 설치가 훨씬 빠릅니다) ──────
+# ── R 패키지 ────────────────────────────────────────────────
+#  repos 를 지정하지 않습니다. rocker 이미지가 자기 OS(noble)에 맞는
+#  P3M 바이너리 저장소를 기본 CRAN 으로 이미 설정해 두기 때문입니다.
+#  여기에 jammy 등 다른 배포판을 직접 적으면 stringi 가 libicui18n.so.70 을
+#  찾다가 실행 시점에 죽습니다.
 RUN R -q -e "install.packages(c( \
       'plumber','jsonlite','DBI','RSQLite', \
       'dplyr','tidyr','tibble','ggplot2','stringr','purrr','broom', \
@@ -26,13 +30,18 @@ RUN R -q -e "install.packages(c( \
       'rpart','rpart.plot','ranger','randomForest','xgboost', \
       'MatchIt','DoubleML','grf','mlr3','mlr3learners', \
       'ragg','systemfonts','evaluate' \
-    ), repos = 'https://packagemanager.posit.co/cran/__linux__/jammy/latest')"
+    ))" \
+ && R -q -e "pkgs <- c('plumber','jsonlite','DBI','RSQLite','dplyr','ggplot2','stringr','glmnet','rpart','ranger','randomForest','xgboost','ragg','evaluate'); \
+             miss <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]; \
+             if (length(miss)) stop('설치 실패: ', paste(miss, collapse=', ')); \
+             invisible(lapply(pkgs, library, character.only = TRUE)); \
+             cat('모든 패키지 로드 확인 완료\n')"
 
 # ── (선택) Keras / TensorFlow ────────────────────────────────
 RUN if [ "$ENABLE_KERAS" = "true" ]; then \
       apt-get update && apt-get install -y --no-install-recommends python3 python3-pip python3-venv && \
       rm -rf /var/lib/apt/lists/* && \
-      R -q -e "install.packages(c('keras3','reticulate'), repos='https://packagemanager.posit.co/cran/__linux__/jammy/latest')" && \
+      R -q -e "install.packages(c('keras3','reticulate'))" && \
       python3 -m venv /opt/venv && \
       /opt/venv/bin/pip install --no-cache-dir 'tensorflow-cpu==2.16.*' ; \
     fi
