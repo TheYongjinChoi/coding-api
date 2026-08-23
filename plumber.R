@@ -81,6 +81,8 @@ new_user_env <- function() {
   env <- new.env(parent = globalenv())
   # 실습 데이터 경로 헬퍼: 학생 코드에서 DATA("ohie_all6m.rds") 로 사용
   assign("DATA", function(file) file.path(DATA_DIR, file), envir = env)
+  # tracker 가 기록을 남길 때 로컬 실행과 구분할 수 있게 표시해 둡니다.
+  assign(".kapae_client", "web", envir = env)
   env
 }
 
