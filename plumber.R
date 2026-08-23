@@ -338,9 +338,19 @@ function(session = NULL) {
 }
 
 # ── CSV 내보내기 ─────────────────────────────────────────────
+#  plumber 의 @serializer csv 는 readr 을 요구합니다. 그 패키지 하나를
+#  더 넣으면 이미지 빌드가 길어지므로 base R 의 write.csv 로 직접 만듭니다.
 #* @get /export
-#* @serializer csv
-function() {
+#* @serializer contentType list(type="text/csv; charset=UTF-8")
+function(res) {
   con <- get_db(); on.exit(dbDisconnect(con))
-  dbGetQuery(con, "SELECT * FROM events ORDER BY timestamp")
+  d <- dbGetQuery(con, "SELECT * FROM events ORDER BY timestamp")
+
+  out <- character()
+  tc <- textConnection("out", "w", local = TRUE)
+  utils::write.csv(d, tc, row.names = FALSE)
+  close(tc)
+
+  res$setHeader("Content-Disposition", "attachment; filename=events.csv")
+  charToRaw(paste0(paste(out, collapse = "\n"), "\n"))
 }
