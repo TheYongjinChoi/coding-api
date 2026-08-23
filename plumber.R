@@ -261,6 +261,7 @@ do_run <- function(body) {
 }
 
 # ── 정답 확인 (tracker 연동) ─────────────────────────────────
+# tracker 는 Supabase 기록에 httr2 를 씁니다(Dockerfile 참고).
 #* @post /check
 #* @serializer unboxedJSON
 function(req) {
@@ -272,11 +273,20 @@ function(req) {
   if (is.null(s) || !exists("check", envir = s$env, inherits = FALSE))
     return(list(available = FALSE))
 
-  txt <- tryCatch(
-    paste(utils::capture.output(eval(call("check", as.character(body$check_id)), envir = s$env)),
-          collapse = "\n"),
-    error = function(e) paste0("채점 함수 오류: ", conditionMessage(e))
-  )
+  # tracker 의 check() 는 결과를 message() 로 냅니다. message 는 stderr 로 가므로
+  # capture.output 만으로는 잡히지 않습니다. 둘 다 모아야 합니다.
+  txt <- tryCatch({
+    msgs <- character()
+    outs <- utils::capture.output(
+      withCallingHandlers(
+        eval(call("check", as.character(body$check_id)), envir = s$env),
+        message = function(m) {
+          msgs <<- c(msgs, conditionMessage(m)); invokeRestart("muffleMessage")
+        }
+      )
+    )
+    paste0(paste(outs, collapse = "\n"), paste(msgs, collapse = ""))
+  }, error = function(e) paste0("채점 함수 오류: ", conditionMessage(e)))
 
   passed <- grepl("\u2705", txt) || grepl("정답입니다", txt)
   failed <- grepl("\u274c", txt) || grepl("다시 확인", txt)

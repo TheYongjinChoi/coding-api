@@ -29,9 +29,9 @@ RUN R -q -e "install.packages(c( \
       'glmnet', \
       'rpart','rpart.plot','ranger','randomForest','xgboost', \
       'MatchIt','DoubleML','grf','mlr3','mlr3learners', \
-      'ragg','systemfonts','evaluate' \
+      'ragg','systemfonts','evaluate','httr2' \
     ))" \
- && R -q -e "pkgs <- c('plumber','jsonlite','DBI','RSQLite','dplyr','ggplot2','stringr','glmnet','rpart','ranger','randomForest','xgboost','ragg','evaluate'); \
+ && R -q -e "pkgs <- c('plumber','jsonlite','DBI','RSQLite','dplyr','ggplot2','stringr','glmnet','rpart','ranger','randomForest','xgboost','ragg','evaluate','httr2'); \
              miss <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]; \
              if (length(miss)) stop('설치 실패: ', paste(miss, collapse=', ')); \
              invisible(lapply(pkgs, library, character.only = TRUE)); \
