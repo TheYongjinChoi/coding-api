@@ -150,6 +150,7 @@ function(req, res) {
 
 # ── 헬스 체크 ────────────────────────────────────────────────
 #* @get /health
+#* @serializer unboxedJSON
 function() {
   list(status = "ok", time = format(Sys.time()),
        sessions = length(ls(SESSIONS)),
@@ -158,6 +159,7 @@ function() {
 
 # ── 세션 시작 ────────────────────────────────────────────────
 #* @post /init
+#* @serializer unboxedJSON
 function(req) {
   body <- tryCatch(fromJSON(req$postBody), error = function(e) NULL)
   if (is.null(body)) return(list(success = FALSE, error = "잘못된 요청입니다."))
@@ -167,6 +169,7 @@ function(req) {
 
 # ── 세션 초기화 ──────────────────────────────────────────────
 #* @post /reset
+#* @serializer unboxedJSON
 function(req) {
   body <- tryCatch(fromJSON(req$postBody), error = function(e) NULL)
   k <- session_key(body$sid %||% "anonymous", body$session %||% "default")
@@ -181,11 +184,22 @@ BLOCKED <- c("system\\(", "shell\\(", "system2\\(", "unlink\\(", "file\\.remove\
 
 # ── R 코드 실행 ──────────────────────────────────────────────
 #* @post /run
+#* @serializer unboxedJSON
 function(req) {
   body <- tryCatch(fromJSON(req$postBody), error = function(e) NULL)
   if (is.null(body) || is.null(body$code))
     return(list(success = FALSE, output = "", error = "코드가 비어 있습니다.", plots = list()))
 
+  # 서버 내부에서 예상치 못한 오류가 나도 500 대신 메시지를 돌려줍니다.
+  tryCatch(do_run(body), error = function(e) {
+    msg <- conditionMessage(e)
+    message("[/run 내부 오류] ", msg)
+    list(success = FALSE, output = "", plots = list(),
+         error = paste0("서버 내부 오류: ", msg))
+  })
+}
+
+do_run <- function(body) {
   code <- body$code
   for (p in BLOCKED) {
     if (grepl(p, code)) {
@@ -246,6 +260,7 @@ function(req) {
 
 # ── 정답 확인 (tracker 연동) ─────────────────────────────────
 #* @post /check
+#* @serializer unboxedJSON
 function(req) {
   body <- tryCatch(fromJSON(req$postBody), error = function(e) NULL)
   if (is.null(body) || is.null(body$check_id))
@@ -270,6 +285,7 @@ function(req) {
 
 # ── 학습 이벤트 추적 ─────────────────────────────────────────
 #* @post /track
+#* @serializer unboxedJSON
 function(req) {
   body <- tryCatch(fromJSON(req$postBody), error = function(e) NULL)
   if (is.null(body)) return(list(success = FALSE))
@@ -297,6 +313,7 @@ function(req) {
 
 # ── 대시보드 데이터 ──────────────────────────────────────────
 #* @get /dashboard/data
+#* @serializer unboxedJSON
 #* @param session 세션명 (optional)
 function(session = NULL) {
   con <- get_db(); on.exit(dbDisconnect(con))
